@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 #define PI 3.141592653589793238462
+#define PI_OVER_TWO PI / 2
+#define PI3_OVER_TWO (3 * PI) / 2
 
 struct level {
   int x;
@@ -15,14 +18,14 @@ struct level {
 struct level map = {
   8,8,64,
   {
-    1,1,1,0,0,0,0,0,
-    1,0,1,0,0,1,1,0,
-    1,0,1,0,0,1,0,0,
-    1,0,1,0,0,0,0,0,
-    1,0,1,0,0,0,0,0,
-    1,0,1,0,0,0,1,0,
-    1,0,0,0,0,0,1,0,
-    1,1,1,1,1,1,1,0,
+    1,1,1,1,1,1,1,1,
+    1,0,1,0,0,1,1,1,
+    1,0,1,0,0,1,0,1,
+    1,0,1,0,0,0,0,1,
+    1,0,1,0,0,0,0,1,
+    1,0,1,0,0,0,1,1,
+    1,0,0,0,0,0,1,1,
+    1,1,1,1,1,1,1,1,
   }
 };
 
@@ -66,41 +69,192 @@ void draw_player() {
   glEnd();
 }
 
-void handle_keyboard(unsigned char key, int x, int y) {
-  if (key == 'w') {
+struct raycaster {
+  float x;
+  float y;
+};
+/* struct ray { */
+/*   float x; */
+/*   float y; */
+/*   float ang; */
+/* }; */
+
+float dist(float ax, float ay, float bx, float by, float angle) // teorema de pitagoras
+{
+  return ( sqrt((bx-ax) * (bx-ax) + (by-ay) * (by-ay)) );
+}
+
+void raycast() {
+  int r,mapx,mapy,mappos,dof;
+  float rx,ry,ra,xoff,yoff;
+
+  ra = p.ang;
+  for (r=0; r<1; r++) {
+    // -------------------------- horizontal --------------------------
+    float a_tan = (-1/tan(ra));
+    float hx = p.x;
+    float hy = p.y;
+    float distH = 100000;
+    dof = 0;
+
+    // olhando pra baixo // looking down
+    if (ra>PI) {
+      ry = (((int)p.y>>6) <<6) - 0.0001;
+      rx = (p.y - ry) * a_tan+p.x;
+      yoff = -64;
+      xoff = -yoff * a_tan;
+    }
+
+    //olhando pra cima // looking up
+    if (ra<PI) {
+      ry = (((int)p.y>>6) <<6) + 64;
+      rx = (p.y - ry) * a_tan+p.x;
+      yoff = 64;
+      xoff = -yoff * a_tan;
+    }
+
+    //olhando diretamente pra esquerda ou direita // looking directly either right or left
+    if (ra == 0 || ra == PI) {
+      rx = p.x;
+      ry = p.y;
+      dof = 8;
+    }
+
+    while(dof<8) {
+      mapx = (int)rx >> 6;
+      mapy = (int)ry >> 6;
+      mappos = mapy * map.x + mapx;
+      if (mappos > 0 && mappos < map.x * map.y && map.map[mappos] == 1) { // ray hit a wall
+        hx = rx;
+        hy = ry;
+        distH = dist(p.x, p.y, hx, hy, ra);
+        dof = 8;
+      } else {
+        rx += xoff;
+        ry += yoff;
+        dof++;
+      }
+    }
+    // -------------------------- vertical --------------------------
+    float n_tan = -tan(ra);
+    float vx = p.x;
+    float vy = p.y;
+    float distV = 100000;
+    dof = 0;
+
+    // olhando pra esquerda // looking left
+    if (ra > PI_OVER_TWO && ra < PI3_OVER_TWO) {
+      rx = (((int)p.x>>6) <<6) - 0.0001;
+      ry = (p.x - rx) * n_tan+p.y;
+      xoff = -64;
+      yoff = -xoff * n_tan;
+    }
+
+    //olhando pra direita // looking right
+    if (ra < PI_OVER_TWO || ra > PI3_OVER_TWO) {
+      rx = (((int)p.x>>6) <<6) + 64;
+      ry = (p.x - rx) * n_tan+p.y;
+      xoff = 64;
+      yoff = -xoff * n_tan;
+    }
+
+    //olhando diretamente pra cima ou pra baixo // looking directly up or down
+    if (ra == 0 || ra == PI) {
+      rx = p.x;
+      ry = p.y;
+      dof = 8;
+    }
+
+    while(dof<8) {
+      mapx = (int)rx >> 6;
+      mapy = (int)ry >> 6;
+      mappos = mapy * map.x + mapx;
+      if (mappos > 0 && mappos < map.x * map.y && map.map[mappos] == 1) { // ray hit a wall
+        vx = rx;
+        vy = ry;
+        distV = dist(p.x, p.y, vx, vy, ra);
+        dof = 8;
+      } else {
+        rx += xoff;
+        ry += yoff;
+        dof++;
+      }
+    }
+
+    float distance;
+    if (distV < distH) {
+      distance = distV;
+      rx = vx;
+      ry = vy;
+    } else if (distH < distV) {
+      distance = distH;
+      rx = hx;
+      ry = hy;
+    }
+
+    // render
+    glColor3f(1, 0, 0);
+    glLineWidth(1);
+    glBegin(GL_LINES);
+    glVertex2i(p.x, p.y);
+    glVertex2i(rx, ry);
+    glEnd();
+  }
+}
+
+int fix_ang(int a){
+  if(a>359){
+    a-=360;
+  } if(a<0){
+    a+=360;
+  }
+  return a;
+}
+
+unsigned char keymaps[256];
+void handle_keyboard() {
+  if (keymaps['w'] == 1) {
     /* p.y-=4; */
     p.x+=p.dX;
     p.y+=p.dY;
   }
-  if (key == 's') {
+  if (keymaps['s'] == 1) {
     /* p.y+=4; */
     p.x-=p.dX;
     p.y-=p.dY;
   }
-  if (key == 'a') {
+  if (keymaps['a'] == 1) {
     /* p.x-=4; */
     p.ang-=0.1;
+    fix_ang(p.ang);
     if (p.ang < 0) { p.ang += 2*PI; }
     p.dX = cos(p.ang) * 5;
     p.dY = sin(p.ang) * 5;
   }
-  if (key == 'd') {
+  if (keymaps['d'] == 1) {
     /* p.x+=4; */
     p.ang+=0.1;
+    fix_ang(p.ang);
     if (p.ang > 2*PI) { p.ang -= 2*PI; }
     p.dX = cos(p.ang) * 5;
     p.dY = sin(p.ang) * 5;
   }
 
-  glutPostRedisplay();
+  /* glutPostRedisplay(); */
 }
+
+void handle_keydown(unsigned char key, int x, int y) { keymaps[key] = 1; }
+void handle_keyup(unsigned char key, int x, int y) { keymaps[key] = 0; }
 
 void display() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawMap2D();
   draw_player();
+  raycast();
+  handle_keyboard();
   
   glutSwapBuffers();
+  glutPostRedisplay();
 }
 
 void init() {
@@ -119,6 +273,8 @@ int main(int argc, char* argv[]) {
   glutCreateWindow("KarboXXX's Raycaster");
   init();
   glutDisplayFunc(display);
-  glutKeyboardFunc(handle_keyboard);
+  glutIgnoreKeyRepeat(GLUT_KEY_REPEAT_OFF);
+  glutKeyboardFunc(handle_keydown);
+  glutKeyboardUpFunc(handle_keyup);
   glutMainLoop();
 }
