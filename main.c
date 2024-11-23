@@ -8,6 +8,10 @@
 #define PI 3.141592653589793238462
 #define PI_OVER_TWO PI / 2
 #define PI3_OVER_TWO (3 * PI) / 2
+#define ONE_DEGREE_IN_RADIANS 0.01745329252
+
+#define WINDOW_WIDTH 1000
+#define WINDOW_HEIGHT 530
 
 struct level {
   int x;
@@ -19,12 +23,12 @@ struct level map = {
   8,8,64,
   {
     1,1,1,1,1,1,1,1,
-    1,0,1,0,0,1,1,1,
+    1,0,0,0,0,0,0,1,
     1,0,1,0,0,1,0,1,
     1,0,1,0,0,0,0,1,
     1,0,1,0,0,0,0,1,
-    1,0,1,0,0,0,1,1,
-    1,0,0,0,0,0,1,1,
+    1,0,1,0,0,0,0,1,
+    1,0,0,0,0,0,0,1,
     1,1,1,1,1,1,1,1,
   }
 };
@@ -88,8 +92,11 @@ void raycast() {
   int r,mapx,mapy,mappos,dof;
   float rx,ry,ra,xoff,yoff;
 
-  ra = p.ang;
-  for (r=0; r<1; r++) {
+  ra = p.ang - ONE_DEGREE_IN_RADIANS * 40;
+  if (ra<0) { ra +=2*PI; }
+  if (ra>2*PI) { ra-=2*PI; }
+
+  for (r=0; r<80; r++) {
     // -------------------------- horizontal --------------------------
     float a_tan = (-1/tan(ra));
     float hx = p.x;
@@ -186,18 +193,40 @@ void raycast() {
       distance = distV;
       rx = vx;
       ry = vy;
+      
+      glColor3f(0.9, 0, 0);
     } else if (distH < distV) {
       distance = distH;
       rx = hx;
       ry = hy;
+
+      glColor3f(0.7, 0, 0);
     }
 
-    // render
-    glColor3f(1, 0, 0);
+    ra+=ONE_DEGREE_IN_RADIANS;
+    if (ra<0) { ra +=2*PI; }
+    if (ra>2*PI) { ra-=2*PI; }
+    
+    // render raycasts in map
+    /* glColor3f(1, 0, 0); */
     glLineWidth(1);
     glBegin(GL_LINES);
     glVertex2i(p.x, p.y);
     glVertex2i(rx, ry);
+    glEnd();
+
+    //render 3D
+    float ca=p.ang-ra;
+    if (ca<0) { ca+=2*PI; }
+    if (ca>2*PI) { ca-=2*PI; }
+    distance = distance * cos(ca); // fix fisheye effect
+    
+    float line_height = (map.size * WINDOW_HEIGHT - 800)/distance;
+    float line_offset = 200-line_height/2;
+    glLineWidth(12);
+    glBegin(GL_LINES);
+    glVertex2i(r*6+530,line_offset);
+    glVertex2i(r*6+530, line_height+line_offset);
     glEnd();
   }
 }
@@ -262,14 +291,14 @@ void init() {
   gluOrtho2D(0, 1024, 512, 0);
 
   p.x=300; p.y=300;
-  p.dX = cos(p.ang) * 5;
-  p.dY = sin(p.ang) * 5;
+  p.dX = cos(p.ang) * 3;
+  p.dY = sin(p.ang) * 3;
 }
 
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-  glutInitWindowSize(1024, 512);
+  glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
   glutCreateWindow("KarboXXX's Raycaster");
   init();
   glutDisplayFunc(display);
