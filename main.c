@@ -240,20 +240,33 @@ int fix_ang(int a){
   return a;
 }
 
+// checks state of key in map array given
+// x and y coordinates mapped to
+// single dimensional 8x8 array.
+int check_collision(float x, float y) {
+  int r_x, r_y;
+  r_x = ceil(x / map.size) - 1; // -1 because the very first cell starts at 0
+  r_y = ceil(y / map.size);
+
+  int single_d_coord = (8 * r_y) - (8 - r_x);
+  return map.map[single_d_coord];
+}
+
 unsigned char keymaps[256];
 void handle_keyboard() {
   if (keymaps['w'] == 1) {
-    /* p.y-=4; */
-    p.x+=p.dX;
-    p.y+=p.dY;
+    if (check_collision(p.x + p.dX, p.y) == 0)
+      p.x+=p.dX;
+    if (check_collision(p.x, p.y + p.dY) == 0)
+      p.y+=p.dY;
   }
   if (keymaps['s'] == 1) {
-    /* p.y+=4; */
-    p.x-=p.dX;
-    p.y-=p.dY;
+    if (check_collision(p.x - p.dX, p.y) == 0)
+      p.x-=p.dX;
+    if (check_collision(p.x, p.y - p.dY) == 0)
+      p.y-=p.dY;
   }
   if (keymaps['a'] == 1) {
-    /* p.x-=4; */
     p.ang-=0.1;
     fix_ang(p.ang);
     if (p.ang < 0) { p.ang += 2*PI; }
@@ -261,19 +274,28 @@ void handle_keyboard() {
     p.dY = sin(p.ang) * 5;
   }
   if (keymaps['d'] == 1) {
-    /* p.x+=4; */
     p.ang+=0.1;
     fix_ang(p.ang);
     if (p.ang > 2*PI) { p.ang -= 2*PI; }
     p.dX = cos(p.ang) * 5;
     p.dY = sin(p.ang) * 5;
   }
-
-  /* glutPostRedisplay(); */
 }
 
 void handle_keydown(unsigned char key, int x, int y) { keymaps[key] = 1; }
 void handle_keyup(unsigned char key, int x, int y) { keymaps[key] = 0; }
+
+void show_player_coords() {
+  glColor3f(1,1,1);
+  glRasterPos2f(WINDOW_WIDTH - 240, WINDOW_HEIGHT - 50);
+  
+  size_t size = 120;
+  char buff[size];
+  snprintf(buff, size, "XY: %.1f %.1f (pitch: %.2f)", p.x, p.y, p.ang);
+  for (int i = 0; i < size; i++) {
+    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, buff[i]);
+  }
+}
 
 void display() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -281,6 +303,7 @@ void display() {
   draw_player();
   raycast();
   handle_keyboard();
+  show_player_coords();
   
   glutSwapBuffers();
   glutPostRedisplay();
@@ -291,8 +314,8 @@ void init() {
   gluOrtho2D(0, 1024, 512, 0);
 
   p.x=300; p.y=300;
-  p.dX = cos(p.ang) * 3;
-  p.dY = sin(p.ang) * 3;
+  p.dX = cos(p.ang) * 2;
+  p.dY = sin(p.ang) * 2;
 }
 
 int main(int argc, char* argv[]) {
