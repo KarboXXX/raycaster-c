@@ -1,6 +1,7 @@
 #include <GL/freeglut_std.h>
 #include <GL/glext.h>
 #include <GL/glut.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -25,9 +26,9 @@ struct level map = {
     1,1,1,1,1,1,1,1,
     1,0,0,0,0,0,0,1,
     1,0,1,0,0,1,0,1,
+    1,0,1,1,0,1,1,1,
     1,0,1,0,0,0,0,1,
-    1,0,1,0,0,0,0,1,
-    1,0,1,0,0,0,0,1,
+    1,0,1,1,0,0,0,1,
     1,0,0,0,0,0,0,1,
     1,1,1,1,1,1,1,1,
   }
@@ -285,12 +286,13 @@ void handle_keyboard() {
 void handle_keydown(unsigned char key, int x, int y) { keymaps[key] = 1; }
 void handle_keyup(unsigned char key, int x, int y) { keymaps[key] = 0; }
 
+size_t size = 120;
+char buff[120];
+
 void show_player_coords() {
   glColor3f(1,1,1);
-  glRasterPos2f(WINDOW_WIDTH - 240, WINDOW_HEIGHT - 50);
+  glRasterPos2f(WINDOW_WIDTH - 160, WINDOW_HEIGHT - 30);
   
-  size_t size = 120;
-  char buff[size];
   snprintf(buff, size, "XY: %.1f %.1f (pitch: %.2f)", p.x, p.y, p.ang);
   for (int i = 0; i < size; i++) {
     glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, buff[i]);
@@ -316,6 +318,10 @@ void init() {
   p.x=300; p.y=300;
   p.dX = cos(p.ang) * 2;
   p.dY = sin(p.ang) * 2;
+
+  for (int i = 0; i < size; i++) {
+    buff[i] = ' ';
+  }
 }
 
 int main(int argc, char* argv[]) {
