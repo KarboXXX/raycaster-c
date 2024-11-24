@@ -1,5 +1,5 @@
 # Raycasting made in C
-A very simple and lightweight raycast engine made with C. Only renders what's visible.
+A very simple and lightweight raycast engine made with C and OpenGL. Only renders what's visible.
 
 ![screenshot](https://i.imgur.com/MV9VuWQ.png)
 
