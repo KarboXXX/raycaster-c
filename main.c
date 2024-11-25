@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
+#include <string.h>
 #define PI 3.141592653589793238462
 #define PI_OVER_TWO PI / 2
 #define PI3_OVER_TWO (3 * PI) / 2
@@ -18,7 +19,7 @@ struct level {
   int x;
   int y;
   int size;
-  int map[];
+  unsigned char map[64];
 };
 struct level map = {
   8,8,64,
@@ -325,6 +326,17 @@ void init() {
 }
 
 int main(int argc, char* argv[]) {
+  if (argc == 2) {
+    FILE *file_ptr;
+    file_ptr = fopen(argv[1], "rb");
+    if (file_ptr != NULL) {
+      while (fread(&map.map, sizeof(unsigned char)*64, 1, file_ptr)) {
+        printf("[start] reading %lu bytes from %s...\n", sizeof(unsigned char)*64, argv[1]);
+      }  
+    }
+    fclose(file_ptr);
+  }
+  
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
   glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
